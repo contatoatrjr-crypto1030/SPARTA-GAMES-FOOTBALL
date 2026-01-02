@@ -3,21 +3,18 @@ import requests
 from datetime import datetime
 
 # =========================================================
-# CONFIGURAÇÃO DE ACESSO (COLE SUA CHAVE ABAIXO)
+# CONFIGURAÇÃO DE ACESSO SPARTA (CHAVE INTEGRADA)
 # =========================================================
-SUA_CHAVE_REAL = "0fc8e0ad59e9d1a347cdd2426f7aaa02" 
+API_KEY_SPARTA = "0fc8e0ad59e9d1a347cdd2426f7aaa02"
+headers = {'x-apisports-key': API_KEY_SPARTA}
 # =========================================================
 
 # 1. IDENTIDADE DO TERMINAL
 st.set_page_config(page_title="SPARTA GAMES FOOTBALL", layout="wide")
 st.title("⚔️ SPARTA GAMES FOOTBALL")
+st.markdown("---")
 
-# 2. CONFIGURAÇÃO DE CABEÇALHO (VALIDADO NO TESTE)
-headers = {
-    'x-apisports-key': SUA_CHAVE_REAL
-}
-
-# 3. DICIONÁRIO DE LIGAS (SISTEMA COMPLETO)
+# 2. DICIONÁRIO DE LIGAS ELITE (SISTEMA COMPLETO)
 ligas_ids = {
     "Inglaterra: Premier League": 39,
     "Inglaterra: Championship": 40,
@@ -38,12 +35,12 @@ ligas_ids = {
     "Copa Libertadores": 13
 }
 
-# 4. INTERFACE LATERAL (FILTROS)
+# 3. INTERFACE LATERAL (FILTROS DE MINERAÇÃO)
 st.sidebar.title("🛡️ MENU SPARTA")
-liga_nome = st.sidebar.selectbox("ESCOLHA A LIGA ELITE:", list(ligas_ids.keys()))
+liga_nome = st.sidebar.selectbox("ESCOLHA A LIGA:", list(ligas_ids.keys()))
 data_alvo = st.sidebar.date_input("DATA DA MINERAÇÃO:", datetime.now())
 
-# 5. MOTOR DE MINERAÇÃO PRO
+# 4. MOTOR DE MINERAÇÃO DE VALOR
 if st.button("🚀 EXECUTAR MINERAÇÃO PROFUNDA"):
     data_str = data_alvo.strftime("%Y-%m-%d")
     id_liga = ligas_ids[liga_nome]
@@ -51,38 +48,55 @@ if st.button("🚀 EXECUTAR MINERAÇÃO PROFUNDA"):
     # Temporada 2025 (Necessária para ligas europeias em Jan/2026)
     season = 2025
     
-    url = f"https://v3.football.api-sports.io/fixtures?league={id_liga}&season={season}&date={data_str}"
+    url_fixtures = f"https://v3.football.api-sports.io/fixtures?league={id_liga}&season={season}&date={data_str}"
     
-    with st.spinner("Minerando dados de elite via API PRO..."):
+    with st.spinner("Minerando dados de elite e encontrando desvios..."):
         try:
-            response = requests.get(url, headers=headers).json()
+            res_fix = requests.get(url_fixtures, headers=headers).json()
             
-            # Verificação de Erros de Autenticação
-            if response.get('errors') and len(response['errors']) > 0:
-                st.error(f"Erro de Conexão: {response['errors']}")
-            
-            # Exibição dos Dados Integrados
-            elif response.get('response'):
-                jogos = response['response']
-                if len(jogos) > 0:
-                    st.success(f"✅ INTEGRAÇÃO CONCLUÍDA: {len(jogos)} JOGOS ENCONTRADOS")
+            if res_fix.get('response'):
+                jogos = res_fix['response']
+                st.success(f"✅ {len(jogos)} JOGOS ENCONTRADOS")
+                
+                for jogo in jogos:
+                    id_jogo = jogo['fixture']['id']
+                    time_casa = jogo['teams']['home']['name']
+                    time_fora = jogo['teams']['away']['name']
                     
-                    for jogo in jogos:
-                        with st.expander(f"🏟️ {jogo['teams']['home']['name']} vs {jogo['teams']['away']['name']}"):
-                            col1, col2 = st.columns(2)
-                            with col1:
-                                st.write(f"⏰ **Hora:** {jogo['fixture']['date'][11:16]}")
-                                st.write(f"📍 **Estádio:** {jogo['fixture']['venue']['name']}")
+                    # Expander para cada jogo com mineração de Probabilidades
+                    with st.expander(f"🏟️ {time_casa} vs {time_fora} - ANALISAR VALOR"):
+                        
+                        # Chamada para buscar Previsões (Predictions)
+                        url_pred = f"https://v3.football.api-sports.io/predictions?fixture={id_jogo}"
+                        res_pred = requests.get(url_pred, headers=headers).json()
+                        
+                        col1, col2, col3 = st.columns(3)
+                        
+                        with col1:
+                            st.write("**📍 Info Geral**")
+                            st.write(f"⏰ Hora: {jogo['fixture']['date'][11:16]}")
+                            st.write(f"🏟️ Local: {jogo['fixture']['venue']['name']}")
+                            st.write(f"📊 Status: {jogo['fixture']['status']['long']}")
+                        
+                        if res_pred.get('response'):
+                            data = res_pred['response'][0]
                             with col2:
-                                st.write(f"📊 **Status:** {jogo['fixture']['status']['long']}")
-                                st.info("🎯 DADOS PRO ATIVOS")
-                else:
-                    st.warning(f"Nenhum jogo encontrado para {liga_nome} em {data_str} (Temporada {season}).")
+                                st.write("**🎲 Probabilidades**")
+                                st.write(f"🏆 Favorito: {data['predictions']['winner']['name']}")
+                                st.write(f"📈 Força Casa: {data['comparison']['total']['home']}")
+                                st.write(f"📉 Força Fora: {data['comparison']['total']['away']}")
+                            
+                            with col3:
+                                st.write("**⚽ Análise de Gols**")
+                                st.success(f"Conselho: {data['predictions']['advice']}")
+                                st.warning(f"Expectativa: {data['predictions']['goals']['home'] or 'N/A'}")
+                        else:
+                            st.info("Estatísticas detalhadas não disponíveis para este jogo.")
             else:
-                st.error("Resposta inválida da API. Verifique sua chave.")
+                st.warning(f"Nenhum jogo encontrado para {liga_nome} em {data_str}.")
                 
         except Exception as e:
-            st.error(f"Falha Crítica no Sistema: {e}")
+            st.error(f"Falha na mineração: {e}")
 
 st.sidebar.write("---")
-st.sidebar.caption("SPARTA GAMES FOOTBALL v3.0 - API PRO INTEGRADA")
+st.sidebar.caption("SPARTA GAMES FOOTBALL v4.0 - API PRO ATIVA")
