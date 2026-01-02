@@ -2,74 +2,72 @@ import streamlit as st
 import requests
 from datetime import datetime
 
-# 1. SETUP DO TERMINAL
+# 1. IDENTIDADE VISUAL
 st.set_page_config(page_title="SPARTA GAMES FOOTBALL", layout="wide")
 st.title("⚔️ SPARTA GAMES FOOTBALL")
 
-# 2. AUTENTICAÇÃO PURA (Padrão Direto API-Sports)
+# 2. AUTENTICAÇÃO (Conforme Seção Authentication da Doc V3)
 if "api_key" in st.secrets:
     API_KEY = st.secrets["api_key"]
 else:
-    st.error("❌ Chave não configurada nos Segredos (Secrets).")
+    st.error("❌ Chave API não encontrada nos Segredos (Secrets).")
     st.stop()
 
-# CABEÇALHO LIMPO: Conforme sua documentação, sem host adicional para evitar erro 4xSe
+# Conforme a documentação: x-apisports-key é para acesso direto
 headers = {
     'x-apisports-key': API_KEY
 }
 
-# 3. DICIONÁRIO COMPLETO DE LIGAS (Sem limitações)
+# 3. FILTROS DE ELITE (Todas as Ligas)
 ligas_ids = {
     "Inglaterra: Premier League": 39,
-    "Inglaterra: Championship": 40,
     "Espanha: La Liga": 140,
     "Itália: Serie A": 135,
     "Alemanha: Bundesliga": 78,
-    "França: Ligue 1": 61,
     "Brasil: Série A": 71,
     "Brasil: Série B": 72,
     "Portugal: Liga Portugal": 94,
-    "Holanda: Eredivisie": 88,
     "Arábia Saudita: Pro League": 307,
-    "Champions League": 2,
-    "Copa Libertadores": 13
+    "Champions League": 2
 }
 
 st.sidebar.title("🛡️ TERMINAL SPARTA")
-liga_nome = st.sidebar.selectbox("ESCOLHA A LIGA:", list(ligas_ids.keys()))
+liga_nome = st.sidebar.selectbox("LIGA:", list(ligas_ids.keys()))
 data_alvo = st.sidebar.date_input("DATA DO JOGO:", datetime.now())
 
-# 4. MOTOR DE BUSCA (ENDPOINT FIXTURES)
+# 4. MINERAÇÃO DIRETA (Endpoint Fixtures)
 if st.button("🚀 EXECUTAR MINERAÇÃO PROFUNDA"):
     data_str = data_alvo.strftime("%Y-%m-%d")
     id_liga = ligas_ids[liga_nome]
     
-    # A temporada na API é definida pelo ano de início (2025 para Europa)
+    # IMPORTANTE: Para a API, Jan/2026 ainda é Temporada 2025
     season = 2025
     
-    # URL DIRETA DA API-SPORTS
+    # URL oficial sem o intermediário RapidAPI (Evita Erro 4xSe)
     url = f"https://v3.football.api-sports.io/fixtures?league={id_liga}&season={season}&date={data_str}"
     
     try:
-        # Chamada simplificada para validar o token
+        # Chamada direta ao Host v3.football.api-sports.io
         response = requests.get(url, headers=headers).json()
         
-        # Se houver erro de token, o sistema reportará exatamente o que a API diz
+        # Verificação técnica de erro
         if response.get('errors'):
-            st.error(f"Erro de Autenticação: {response['errors']}")
+            st.error(f"Erro na Autenticação: {response['errors']}")
+            st.info("Dica: Verifique se sua chave está correta no painel da API-Football.")
         
         elif response.get('response'):
             jogos = response['response']
             if len(jogos) > 0:
-                st.success(f"INTEGRAÇÃO CONCLUÍDA: {len(jogos)} jogos encontrados.")
+                st.success(f"DADOS INTEGRADOS: {len(jogos)} jogos encontrados.")
                 for jogo in jogos:
                     with st.expander(f"🏟️ {jogo['teams']['home']['name']} vs {jogo['teams']['away']['name']}"):
                         st.write(f"⏰ Hora: {jogo['fixture']['date'][11:16]}")
-                        st.info("🎯 DADOS PRO ATIVOS")
+                        st.write(f"📊 Status: {jogo['fixture']['status']['long']}")
+                        st.info("🎯 DADOS ATIVOS")
             else:
-                st.warning(f"Conectado à API, mas sem jogos para {data_str} na temporada {season}.")
+                st.warning(f"Sem jogos em {data_str} (Temporada {season}).")
         else:
-            st.warning("Resposta da API sem dados. Verifique os créditos do seu plano.")
+            st.error("Resposta inválida da API. Verifique sua assinatura.")
             
     except Exception as e:
-        st.error(f"Erro de Conexão: {e}")
+        st.error(f"Falha Crítica: {e}")
