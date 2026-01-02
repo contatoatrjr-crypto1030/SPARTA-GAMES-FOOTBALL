@@ -2,46 +2,21 @@ import streamlit as st
 import requests
 from datetime import datetime
 
-# 1. CONFIGURAÇÃO DA PÁGINA
-st.set_page_config(page_title="SPARTA GAMES FOOTBALL", layout="wide")
-
-# 2. TÍTULO
+st.set_page_config(page_title="SPARTA GAMES FOOTBALL")
 st.title("⚔️ SPARTA GAMES FOOTBALL")
-st.write("---")
 
-# 3. VERIFICAÇÃO DA CHAVE API (Puxa dos Secrets do Streamlit)
 if "api_key" in st.secrets:
     API_KEY = st.secrets["api_key"]
-    headers = {
-        'x-rapidapi-key': API_KEY,
-        'x-rapidapi-host': "v3.football.api-sports.io"
-    }
+    headers = {'x-rapidapi-key': API_KEY, 'x-rapidapi-host': "v3.football.api-sports.io"}
 else:
-    st.error("❌ Chave API não configurada nos Secrets do Streamlit.")
+    st.error("Chave API não configurada nos Segredos (Secrets).")
     st.stop()
 
-# 4. BARRA LATERAL
-st.sidebar.title("MENU SPARTA")
-liga_nome = st.sidebar.selectbox("LIGA ELITE (7/7):", ["Premier League", "La Liga", "Serie A", "Brasileirão Série A"])
-ligas_ids = {"Premier League": 39, "La Liga": 140, "Serie A": 135, "Brasileirão Série A": 71}
+st.sidebar.title("MENU")
+liga = st.sidebar.selectbox("LIGA:", ["Premier League", "La Liga"])
 
-# 5. BOTÃO DE MINERAÇÃO
-if st.button("🚀 EXECUTAR MINERAÇÃO PROFUNDA"):
-    data_hoje = datetime.now().strftime("%Y-%m-%d")
-    st.info(f"Minerando {liga_nome}... Aguarde.")
-    
-    url = f"https://v3.football.api-sports.io/fixtures?league={ligas_ids[liga_nome]}&season=2025&date={data_hoje}"
-    
-    try:
-        response = requests.get(url, headers=headers).json()
-        if response.get('response'):
-            st.success(f"Sucesso! {len(response['response'])} jogos encontrados.")
-            for jogo in response['response']:
-                with st.container():
-                    st.write(f"🏟️ **{jogo['teams']['home']['name']} vs {jogo['teams']['away']['name']}**")
-                    st.write(f"⏰ Horário: {jogo['fixture']['date'][11:16]}")
-                    st.markdown("---")
-        else:
-            st.warning("Nenhum jogo 7/7 encontrado para hoje nesta liga.")
-    except Exception as e:
-        st.error(f"Erro na API: {e}")
+if st.button("EXECUTAR MINERAÇÃO"):
+    st.write("Buscando dados PRO...")
+    url = "https://v3.football.api-sports.io/fixtures?league=39&season=2025&date=2026-01-01"
+    res = requests.get(url, headers=headers).json()
+    st.write(res)
