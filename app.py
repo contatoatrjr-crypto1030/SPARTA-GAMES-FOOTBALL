@@ -5,11 +5,11 @@ from datetime import datetime
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="SPARTA GAMES FOOTBALL", layout="wide")
 
-# 2. TÍTULO E ESTILO SIMPLIFICADO (Sem erros)
+# 2. TÍTULO
 st.title("⚔️ SPARTA GAMES FOOTBALL")
-st.divider()
+st.write("---")
 
-# 3. VERIFICAÇÃO DA CHAVE API
+# 3. VERIFICAÇÃO DA CHAVE API (Puxa dos Secrets do Streamlit)
 if "api_key" in st.secrets:
     API_KEY = st.secrets["api_key"]
     headers = {
@@ -20,7 +20,7 @@ else:
     st.error("❌ Chave API não configurada nos Secrets do Streamlit.")
     st.stop()
 
-# 4. BARRA LATERAL E FILTROS
+# 4. BARRA LATERAL
 st.sidebar.title("MENU SPARTA")
 liga_nome = st.sidebar.selectbox("LIGA ELITE (7/7):", ["Premier League", "La Liga", "Serie A", "Brasileirão Série A"])
 ligas_ids = {"Premier League": 39, "La Liga": 140, "Serie A": 135, "Brasileirão Série A": 71}
@@ -28,18 +28,20 @@ ligas_ids = {"Premier League": 39, "La Liga": 140, "Serie A": 135, "Brasileirão
 # 5. BOTÃO DE MINERAÇÃO
 if st.button("🚀 EXECUTAR MINERAÇÃO PROFUNDA"):
     data_hoje = datetime.now().strftime("%Y-%m-%d")
-    st.write(f"🔍 Minerando {liga_nome} para a data: {data_hoje}")
+    st.info(f"Minerando {liga_nome}... Aguarde.")
     
     url = f"https://v3.football.api-sports.io/fixtures?league={ligas_ids[liga_nome]}&season=2025&date={data_hoje}"
     
     try:
         response = requests.get(url, headers=headers).json()
         if response.get('response'):
+            st.success(f"Sucesso! {len(response['response'])} jogos encontrados.")
             for jogo in response['response']:
-                with st.expander(f"🏟️ {jogo['teams']['home']['name']} vs {jogo['teams']['away']['name']}"):
+                with st.container():
+                    st.write(f"🏟️ **{jogo['teams']['home']['name']} vs {jogo['teams']['away']['name']}**")
                     st.write(f"⏰ Horário: {jogo['fixture']['date'][11:16]}")
-                    st.info("🎯 BLOCO C: Analisar Desvios de Valor")
+                    st.markdown("---")
         else:
-            st.warning("Nenhum jogo 7/7 encontrado para hoje.")
+            st.warning("Nenhum jogo 7/7 encontrado para hoje nesta liga.")
     except Exception as e:
-        st.error(f"Erro na chamada da API: {e}")
+        st.error(f"Erro na API: {e}")
