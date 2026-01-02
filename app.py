@@ -2,72 +2,64 @@ import streamlit as st
 import requests
 from datetime import datetime
 
-# 1. SETUP E CONEXÃO PRO
+# 1. SETUP E CHAVE
 API_KEY_SPARTA = "0fc8e0ad59e9d1a347cdd2426f7aaa02"
 headers = {'x-apisports-key': API_KEY_SPARTA}
 
 st.set_page_config(page_title="SPARTA VEREDITO", layout="wide")
-st.title("⚔️ SPARTA GAMES: MINERADOR DE VEREDITOS")
+st.title("⚔️ SPARTA GAMES: MINERADOR DE ELITE")
 
 # 2. SELEÇÃO DE LIGA
-ligas_ids = {"Premier League": 39, "La Liga": 140, "Serie A": 135, "Brasileirão": 71, "Champions": 2}
+ligas_ids = {"Premier League": 39, "La Liga": 140, "Serie A": 135, "Brasileirão": 71}
 st.sidebar.title("🛡️ FILTROS")
 liga_nome = st.sidebar.selectbox("LIGA:", list(ligas_ids.keys()))
 data_alvo = st.sidebar.date_input("DATA:", datetime.now())
 
-# 3. MOTOR DE BUSCA E VEREDITO
-if st.button("🚀 GERAR VEREDITOS DE VALOR"):
+# 3. MOTOR DE MINERAÇÃO
+if st.button("🚀 ENCONTRAR DESVIOS DE VALOR"):
     data_str = data_alvo.strftime("%Y-%m-%d")
-    # Ajuste automático de temporada para evitar erro de banco de dados
-    season = 2025
-    url = f"https://v3.football.api-sports.io/fixtures?league={ligas_ids[liga_nome]}&season={season}&date={data_str}"
+    url = f"https://v3.football.api-sports.io/fixtures?league={ligas_ids[liga_nome]}&season=2025&date={data_str}"
     
-    with st.spinner("Minerando desvios de valor..."):
+    with st.spinner("Minerando desvios..."):
         try:
             res = requests.get(url, headers=headers).json()
-            
             if res.get('response'):
                 for jogo in res['response']:
                     id_j = jogo['fixture']['id']
-                    home, away = jogo['teams']['home']['name'], jogo['teams']['away']['name']
+                    h, a = jogo['teams']['home']['name'], jogo['teams']['away']['name']
                     
-                    # Chamada de Previsões
+                    # Previsões
                     u_pred = f"https://v3.football.api-sports.io/predictions?fixture={id_j}"
                     r_pred = requests.get(u_pred, headers=headers).json()
                     
                     if r_pred.get('response'):
                         d = r_pred['response'][0]
                         
-                        # TRATAMENTO DE ERRO (VALOR VAZIO)
-                        try:
-                            val_h = d['comparison']['total']['home']
-                            val_a = d['comparison']['total']['away']
-                            f_casa = int(val_h.replace('%','')) if val_h else 0
-                            f_fora = int(val_fora.replace('%','')) if val_a else 0
-                            desvio = abs(f_casa - f_fora)
-                        except:
-                            desvio = 0
-                            
+                        # Pegando as forças com trava de segurança
+                        f_h = int(d['comparison']['total']['home'].replace('%','')) if d['comparison']['total']['home'] else 0
+                        f_a = int(d['comparison']['total']['away'].replace('%','')) if d['comparison']['total']['away'] else 0
+                        desvio = abs(f_h - f_a)
                         conselho = d['predictions']['advice']
-                        
-                        # --- LÓGICA VISUAL DO VEREDITO ---
-                        cor_alerta = "#555" # Cinza padrão
-                        status_valor = "Análise Disponível"
-                        
-                        if desvio >= 30: 
-                            cor_alerta = "#FF4B4B" # Vermelho Sparta
-                            status_valor = "🔥 ALERTA DE DESVIO DETECTADO"
+
+                        # --- LÓGICA DE FILTRO SPARTA ---
+                        # Se o desvio for baixo, usamos uma cor neutra. Se for alto, alertamos.
+                        cor = "#FF4B4B" if desvio >= 25 else "#262730"
+                        borda = "2px solid #FF4B4B" if desvio >= 25 else "1px solid #555"
                         
                         st.markdown(f"""
-                        <div style="border: 2px solid {cor_alerta}; padding: 15px; border-radius: 10px; margin-bottom: 10px; background-color: #0e1117;">
-                            <h3 style="color: {cor_alerta}; margin-top:0;">{status_valor}</h3>
-                            <h4 style="margin-bottom:5px;">🏟️ {home} vs {away}</h4>
-                            <p style="margin:2px;"><b>⚖️ DIFERENÇA DE FORÇA:</b> {desvio}%</p>
-                            <p style="margin:2px; color: #00ff00;"><b>🎯 VEREDITO: {conselho}</b></p>
-                            <p style="font-size: 12px; color: gray; margin-top:10px;">Status: {jogo['fixture']['status']['long']}</p>
+                        <div style="border: {borda}; padding: 15px; border-radius: 10px; margin-bottom: 15px; background-color: #0e1117;">
+                            <h3 style="color: {cor}; margin:0;">{'🔥 DESVIO ENCONTRADO' if desvio >= 25 else 'Análise Regular'}</h3>
+                            <h2 style="margin: 10px 0;">{h} vs {a}</h2>
+                            <div style="display: flex; gap: 20px;">
+                                <div><b>🏠 Força Casa:</b> {f_h}%</div>
+                                <div><b>🚀 Força Fora:</b> {f_a}%</div>
+                                <div><b>⚖️ Desvio:</b> {desvio}%</div>
+                            </div>
+                            <hr style="border: 0.5px solid #444;">
+                            <p style="font-size: 18px; color: #00ff00;"><b>🎯 VEREDITO: {conselho}</b></p>
                         </div>
                         """, unsafe_allow_html=True)
             else:
-                st.warning("Nenhum jogo encontrado para esta data/liga.")
+                st.warning("Sem dados para esta liga hoje.")
         except Exception as e:
-            st.error(f"Erro na mineração: {e}")
+            st.error(f"Erro: {e}")
