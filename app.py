@@ -5,7 +5,7 @@ from datetime import datetime
 # =========================================================
 # CONFIGURAÇÃO DE ACESSO (COLE SUA CHAVE ABAIXO)
 # =========================================================
-SUA_CHAVE_REAL = "COLE_SUA_CHAVE_AQUI" 
+SUA_CHAVE_REAL = "0fc8e0ad59e9d1a347cdd2426f7aaa02" 
 # =========================================================
 
 # 1. IDENTIDADE DO TERMINAL
