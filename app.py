@@ -35,14 +35,18 @@ if st.button("🚀 ENCONTRAR DESVIOS DE VALOR"):
                     if r_pred.get('response'):
                         d = r_pred['response'][0]
                         
-                        # Pegando as forças com trava de segurança
-                        f_h = int(d['comparison']['total']['home'].replace('%','')) if d['comparison']['total']['home'] else 0
-                        f_a = int(d['comparison']['total']['away'].replace('%','')) if d['comparison']['total']['away'] else 0
+                        # --- CORREÇÃO DO ERRO DE CONVERSÃO ---
+                        try:
+                            # Primeiro converte para float, depois para int para remover o '.0'
+                            f_h = int(float(d['comparison']['total']['home'].replace('%',''))) if d['comparison']['total']['home'] else 0
+                            f_a = int(float(d['comparison']['total']['away'].replace('%',''))) if d['comparison']['total']['away'] else 0
+                        except:
+                            f_h, f_a = 0, 0
+                            
                         desvio = abs(f_h - f_a)
                         conselho = d['predictions']['advice']
 
                         # --- LÓGICA DE FILTRO SPARTA ---
-                        # Se o desvio for baixo, usamos uma cor neutra. Se for alto, alertamos.
                         cor = "#FF4B4B" if desvio >= 25 else "#262730"
                         borda = "2px solid #FF4B4B" if desvio >= 25 else "1px solid #555"
                         
@@ -62,4 +66,4 @@ if st.button("🚀 ENCONTRAR DESVIOS DE VALOR"):
             else:
                 st.warning("Sem dados para esta liga hoje.")
         except Exception as e:
-            st.error(f"Erro: {e}")
+            st.error(f"Erro na mineração: {e}")
